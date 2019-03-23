@@ -26,9 +26,9 @@ SHELL_ARGS=$1
 #　
 # The GNU License Logo
 #
-#　　　　　　　　　　　　　　 
-#	　 /}　　　 　 　 {ヽ　　　 
-#	 〈 廴,　 　 　 　 〉〉_.. 
+#　　　　　　　　　　　　　　
+#	　 /}　　　 　 　 {ヽ　　　
+#	 〈 廴,　 　 　 　 〉〉_..
 #	　 ＼/^Y⌒,二彡' .: ,.-‐=
 #	　　,ﾉ.:.:::ヽ/.: . .:
 #	　 〈|:..:.:.::ぅ.:ﾐ＜
@@ -37,10 +37,10 @@ SHELL_ARGS=$1
 #	　　ｌ.:::.::...:ﾄﾐ.:.::
 #	　　j.:.:.::::::ゞﾐ爪州ﾘ
 #	　　ﾞVっ:.:..:.:ﾘ川jfﾄﾊﾘ
-#	　 　 `ー''"彡ﾘﾊｊ　　　　　　 　 
+#	　 　 `ー''"彡ﾘﾊｊ　　　　　　 　
 #
 #　
-# http://lh4.ggpht.com/_ctbzgC-JfcA/TTA7GelmCeI/AAAAAAAACYU/oHk1rsKPH40/w700/gnu_1.gif 　 
+# http://lh4.ggpht.com/_ctbzgC-JfcA/TTA7GelmCeI/AAAAAAAACYU/oHk1rsKPH40/w700/gnu_1.gif 　
 #　 　
 # ========================================================================================================================= #
 #
@@ -62,19 +62,19 @@ SHELL_ARGS=$1
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#  
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA 02110-1301, USA.
 #
 # ========================================================================================================================= #
-#	
+#
 # For more help and information visit the following internet pages:
 #
 # http://de.wikipedia.org/wiki/GNU_General_Public_License
@@ -103,55 +103,55 @@ clear
 
 # Helper Functions
 
-function t2s(){
-	# returns the time as seconds of the given format HH:MM:SS	
+function t2s() {
+	# returns the time as seconds of the given format HH:MM:SS
 	local T=$1;shift
 	echo $((10#${T:0:2} * 3600 + 10#${T:3:2} * 60 + 10#${T:6:2}))
 }
 
-function timeDiff(){
-	diff_time=`expr $2 - $1` 	
+function timeDiff() {
+	diff_time=`expr $2 - $1`
 	echo $diff_time
 }
 
-function check_Args(){
-	
+function check_Args() {
+
 	if [ -z "$SHELL_ARGS" ];
 	then
 		echo 'SHELL_ARGS=null'
 		SHELL_ARGS='null'
 	fi
-	
-	
+
+
 	if [ $SHELL_ARGS = "--version" ];
 	then
 		echo "Version: $VERSION"
 		exit 0
 	fi
-		
+
 	if [ $SHELL_ARGS = "--help" ];
 	then
 		# echo "No other command line options are aviable."
 		help
 		exit 0
 	fi
-	
+
 	if [ $SHELL_ARGS = "--debug" ];
 	then
-		read -p 'Debug mode enabled.' BREAK 
+		read -p 'Debug mode enabled.' BREAK
 		set -x
 	fi
 }
 
-function help(){
-	
+function help() {
+
 	clear
 	echo 'Opening help page ...'
 	sleep 1
 	clear
 
 	echo -e '\033[1;32mMP3Cutting.sh(1)	      General Commands Manual           MP3Cutting.sh(1)\033[0m'
-	echo 
+	echo
 	echo 'NAME'
 	echo '		MP3Cutting.sh - Cut MP3 files into single titles'
 	echo
@@ -170,7 +170,7 @@ function help(){
 	echo 'BUGS'
 	echo '		If you find a bug, please report it to jose199441@gmail.com'
 	echo
-	echo 'AUTHORS'  
+	echo 'AUTHORS'
 	echo '		Joseph Pal'
 	echo
 
@@ -230,7 +230,7 @@ case $? in
                 echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
 		exit -1;;
 esac
-	
+
 # ========================================================================================================================= #
 # ========================================================================================================================= #
 
@@ -239,11 +239,11 @@ esac
 echo -e 'Loading Time Steps into the Array ...'
 
 while read line
-do 
-  
+do
+
   # tmp=`echo $line | sed s/[^0-9:0-9]//g`
   # echo $tmp
-  
+
   # Fixing segmentation fault with pattern -> [0-9][0-9]:[0-9][0-9]:[0-9][0-9] !
   timeArray[$i]=`echo $line | sed -n 's/.*\([0-9][0-9]:[0-9][0-9]:[0-9][0-9]\).*/\1/p'`
   echo "Time[$i]: ${timeArray[$i]}"
@@ -261,8 +261,8 @@ echo -e 'Done.\n'
 echo -e 'Loading Music Titles ...'
 
 while read line
-do 
-  
+do
+
   # Fixing segmentation fault with deleting numbers in the titles ! -> | sed -e 's/[0-9]//'
   titleArray[$ii]=`echo $line | sed -e 's/^[0-9]*:*[0-9]*:[0-9]*\s*//'`
   echo "Title[$ii]: ${titleArray[$ii]}"
@@ -291,7 +291,7 @@ else
 
 	endOfFile=`expr $numberOfElements - 1`
 	echo -e "EOF: After $endOfFile Tracks\n"
-	
+
 	for (( element=0; element <= $numberOfElements-1; ++element ))
 	do
 		# Add the title Number to the filename
@@ -306,14 +306,14 @@ else
 		fileName=$titleNumber" - "${titleArray[$element]}".mp3"
 
 		if [ $element -lt $endOfFile ];
-		then			
-			# Calculate th lenght of one title			
+		then
+			# Calculate th lenght of one title
 			titleDuration=$(($(t2s ${timeArray[$element+1]}) - $(t2s ${timeArray[$element]}) ))
-	
+
 			echo -e "[$element]:\t${timeArray[$element]} to ${timeArray[$element+1]} Length: $titleDuration Seconds -> $fileName"
-			
+
 			if [ $SHELL_ARGS = "--debug" ];
-			then		
+			then
 				# Nothing to do -> Debug mode disable sox trimming !
 				echo -e "\n"
 			else
@@ -325,11 +325,11 @@ else
 			then
 				# Nothing to do -> Debug mode disable sox trimming !
 				echo -e "\n"
-			else	
+			else
 				echo -e "[$element]:\t${timeArray[$element]} to EOF -> $fileName"
 				sox "$MP3_FILE" "$directoryPath/$fileName" trim "${timeArray[$element]}" > /dev/null 2>&1
 			fi
-		fi  		
+		fi
 	done
 fi
 
