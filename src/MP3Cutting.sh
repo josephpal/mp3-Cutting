@@ -89,10 +89,16 @@ SHELL_ARGS=$1
 #
 # ========================================================================================================================= #
 
-# Variables
-
+# variables
 VERSION="0.6"
 numberOfElements="0"
+
+# system variables
+GUIMODE=1;
+SOX=0;
+ZENITY=0;
+
+# Index, counters
 i=0;
 ii=0;
 
@@ -131,9 +137,17 @@ function check_Args() {
 
 	if [ $SHELL_ARGS = "--help" ];
 	then
-		# echo "No other command line options are aviable."
+		# echo "No other command line options are available."
 		help
 		exit 0
+	fi
+
+	if [ $SHELL_ARGS = "--no-gui" ];
+	then
+		echo 'Deactivating graphical user interface ...'
+		read -p 'Press [ENTER] to continue!' BREAK
+
+		GUIMODE=0;
 	fi
 
 	if [ $SHELL_ARGS = "--debug" ];
@@ -163,10 +177,10 @@ function help() {
 	echo '		txt file into seperated songs'
 	echo
 	echo 'OPTIONS'
-	echo '		--help		Prints the command line options'
-	echo '		--version	Output version information and exit'
-	echo '		--start		Start the main routine of the script'
-	echo '		--debug		Enables Debug mode. Sox trim is disabled !'
+	echo '		--help		Prints the command line options.'
+	echo '		--version	Output version information and exit.'
+	echo '		--no-gui	Start the script in terminal mode (without zenity gui).'
+	echo '		--debug		Enables Debug mode. Sox trim is disabled!'
 	echo 'BUGS'
 	echo '		If you find a bug, please report it to jose199441@gmail.com'
 	echo
@@ -180,37 +194,128 @@ function help() {
 	exit 0
 }
 
+function checkEnvironment() {
+	echo "Checking environment ..."
+	clear
+
+	ZENITY_PATH=`which zenity`
+	if [ $? -eq 0 ]
+	then
+		ZENITY=1;
+		echo 'Package zenity found.'
+	else
+		echo -e '\033[1;31mGraphical user mode is not available!\033[0m'
+		GUIMODE=0;
+		gnome-terminal
+		echo 'The package zenity is not installed and neccessary.'
+		read -p 'Do you want to install it? [y/n]: ' DECISSION
+
+		if [ "$DECISSION" = "y" ] || [ "$DECISSION" = "yes" ]
+		then
+			echo -e 'Installing zenity ...'
+			sudo apt-get install zenity
+
+			if [ $? -eq 0 ]
+			then
+				ZENITY=1;
+				clear
+			else
+				echo -e '\033[1;31mInstallation failed!\033[0m'
+				exit -1;
+			fi
+		else
+			echo -e '\033[1;31mInstallation aborted!\033[0m'
+			exit -1;
+		fi
+	fi
+
+	SOX_PATH=`which sox`
+	if [ $? -eq 0 ]
+	then
+		SOX=1;
+		echo 'Package sox found.'
+	else
+		if [ $GUIMODE -eq 0 ]
+		then
+			echo 'The package sox is not installed and neccessary.'
+			read -p 'Do you want to install it? [y/n]: ' DECISSION
+
+			if [ "$DECISSION" = "y" ] || [ "$DECISSION" = "yes" ]
+			then
+				echo -e 'Installing sox ...'
+				sudo apt-get install sox
+
+				if [ $? -eq 0 ]
+				then
+					SOX=1;
+					clear
+				else
+					echo -e '\033[1;31mInstallation failed!\033[0m'
+					exit -1;
+				fi
+			else
+				echo -e '\033[1;31mInstallation aborted!\033[0m'
+				exit -1;
+			fi
+		else
+			USERRESPONSE=`zenity --question --title="Package sox not found!" --text="Do you want to install it now?" --width=210 --height=120 > /dev/null 2>&1`
+			case $? in
+			         0)
+			                echo -e 'Installing sox ...'
+											pkexec apt-get install sox
+											if [ $? -eq 0 ]
+											then
+												SOX=1;
+												clear
+											else
+												echo -e '\033[1;31mPermission required!\033[0m'
+												exit -1;
+											fi;;
+			         1)
+			                echo -e '\033[1;31mInstallation aborted!\033[0m'
+											exit -1;;
+			        -1)
+			                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
+											exit -1;;
+			esac
+		fi
+	fi
+}
+
 # ========================================================================================================================= #
+
 check_Args
+checkEnvironment
+
 # ========================================================================================================================= #
 
 # File Selection -> txt
 
-TXT_FILE=`zenity --file-selection --file-filter=*.txt --title="Select the Text File"`
+TXT_FILE=`zenity --file-selection --file-filter=*.txt --title="Select the Text File" > /dev/null 2>&1`
 
 case $? in
          0)
                 echo -e 'Loading TXT File ... \t\t\t\t\t\t\t [ \033[1;32mOK \033[0m ]\n';;
          1)
                 echo -e 'Loading TXT File ... \t\t\t\t\t\t\t[ \033[1;31mFAIL\033[0m ]'
-		echo -e '\033[1;31mCan not find the selected file !\033[0m'
-		exit -1;;
+								echo -e '\033[1;31mCan not find the selected file !\033[0m'
+								exit -1;;
         -1)
                 echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
-		exit -1;;
+								exit -1;;
 esac
 
 # File Selection -> MP3
 
-MP3_FILE=`zenity --file-selection --file-filter=*.mp3 --title="Select the MP3 File"`
+MP3_FILE=`zenity --file-selection --file-filter=*.mp3 --title="Select the MP3 File" > /dev/null 2>&1`
 
 case $? in
          0)
                 echo -e 'Loading MP3 File ... \t\t\t\t\t\t\t [ \033[1;32mOK \033[0m ]\n';;
          1)
                 echo -e 'Loading MP3 File ... \t\t\t\t\t\t\t[ \033[1;31mFAIL\033[0m ]'
-		echo -e '\033[1;31mCan not find the selected file !\033[0m'
-		exit -1;;
+								echo -e '\033[1;31mCan not find the selected file !\033[0m'
+								exit -1;;
         -1)
                 echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
 		exit -1;;
@@ -225,10 +330,10 @@ case $? in
                 echo "Saving Directory: $directoryPath selected.";;
          1)
                 echo -e '\033[1;31mNo Directory selected.\033[0m'
-		exit -1;;
+								exit -1;;
         -1)
                 echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
-		exit -1;;
+								exit -1;;
 esac
 
 # ========================================================================================================================= #
