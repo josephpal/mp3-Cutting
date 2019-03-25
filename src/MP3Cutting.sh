@@ -86,6 +86,7 @@ SHELL_ARGS=$1
 # https://help.gnome.org/users/zenity/stable/file-selection.html.en
 # http://linux.byexamples.com/archives/259/a-complete-zenity-dialog-examples-1/
 # http://manpages.ubuntu.com/manpages/natty/man1/zenity.1.html
+# https://unix.stackexchange.com/questions/254072/how-do-i-ask-password-by-gui-prompt-while-using-sudo-in-script
 #
 # ========================================================================================================================= #
 
