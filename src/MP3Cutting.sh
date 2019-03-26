@@ -88,6 +88,7 @@ SHELL_ARGS=$1
 # http://manpages.ubuntu.com/manpages/natty/man1/zenity.1.html
 # https://unix.stackexchange.com/questions/254072/how-do-i-ask-password-by-gui-prompt-while-using-sudo-in-script
 # https://www.shell-tips.com/2010/06/14/performing-math-calculation-in-bash/
+# https://unix.stackexchange.com/questions/80532/use-the-terminals-autocomplete-path-feature-for-input-to-a-shell-script
 #
 # ========================================================================================================================= #
 
@@ -306,7 +307,7 @@ function loadTimeSteps2Array() {
 	do
 	  # Fixing segmentation fault with pattern -> [0-9][0-9]:[0-9][0-9]:[0-9][0-9] !
 	  timeArray[$i]=`echo $line | sed -n 's/.*\([0-9][0-9]:[0-9][0-9]:[0-9][0-9]\).*/\1/p'`
-	  echo "-> timeArray[$i]: \t${timeArray[$i]}"
+	  echo -e "-> timeArray[$i]: \t${timeArray[$i]}"
 	  i=$[$i+1]
 	done < "$TXT_FILE"
 
@@ -320,11 +321,26 @@ function loadMusicTitles2Array() {
 	do
 	  # Fixing segmentation fault with deleting numbers in the titles ! -> | sed -e 's/[0-9]//'
 	  titleArray[$ii]=`echo $line | sed -e 's/^[0-9]*:*[0-9]*:[0-9]*\s*//'`
-	  echo "-> titleArray[$ii]: \t${titleArray[$ii]}"
+	  echo -e "-> titleArray[$ii]: \t${titleArray[$ii]}"
 	  ii=$[$ii+1]
 	done < "$TXT_FILE"
 
 	echo -e 'Done.\n'
+}
+
+function progressBar() {
+	local duration=${1}
+	already_done() { for ((done=0; done<$elapsed; done++)); do printf "▇▇▇▇▇▇▇▇"; done }
+	remaining() { for ((remain=$elapsed; remain<$duration; remain++)); do printf "        "; done }
+	percentage() { printf "| %s%%" $(((($elapsed)*100)/($duration)*100/100)); }
+	clean_line() { printf "\r"; }
+
+	for (( elapsed=1; elapsed<=$duration; elapsed++ )); do
+			already_done; remaining; percentage
+			sleep 1
+			clean_line
+	done
+	clean_line
 }
 
 
@@ -483,11 +499,23 @@ function cuttingMP3AudioFile() {
 					sox "$MP3_FILE" "$directoryPath/$fileName" trim "${timeArray[$element]}" > /dev/null 2>&1
 				fi
 			fi
+
+			if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+				echo "scale=2;($titleNumber/$numberOfElements)*100" | bc
+				echo "# [$titleNumber/$numberOfElements]: $fileName"
+			else
+				# TODO: text mode progressBar
+				progressBar 10
+			fi
 		done
 	fi
 
 	echo
-	echo "Finished $numberOfElements jobs !"
+	if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+		echo "# Finished $numberOfElements jobs !"
+	else
+		echo "Finished $numberOfElements jobs !"
+	fi
 	echo "Done."
 }
 
@@ -517,7 +545,20 @@ askForOutputDirectory;
 initialize;
 
 # cutting / trimming the mp3 file
-cuttingMP3AudioFile;
+if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+	cuttingMP3AudioFile | zenity --progress \
+	--title="Preparing mp3 audio tracks" \
+	--text="Loading tracks ..." \
+	--percentage=0 \
+	--width=300 --height=140 2>/dev/null
+
+	if [[ $? -eq -1 ]]; then
+  	zenity --error --text="Update canceled." 2>/dev/null
+		exit -1;
+	fi
+else
+	cuttingMP3AudioFile;
+fi
 
 # ========================================================================================================================= #
 # ========================================================================================================================= #
