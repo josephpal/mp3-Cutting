@@ -120,4 +120,31 @@ Done.
 
 #### zenity gui mode
 
-...
+First of all, as always, we have to start the ```MP3Cutting.sh``` shell script, but this time without any arguments.
+
+``` bash
+$:~ cd src/
+$:~ ./MP3Cutting.sh
+```
+
+After that, you have to guide yourself through dialogs; actually, they are pretty obvious. First, choose the title txt file.
+
+<p align="center"><img width="90%" src="docs/txt-file-selection.png"></p>
+
+After that, you have to navigate to the mp3 audio file.
+
+<p align="center"><img width="90%" src="docs/mp3-file-selection.png"></p>
+
+Furthermore, an output directory has to be set.
+
+<p align="center"><img width="90%" src="docs/directory-selection.png"></p>
+
+And now, a progress window shall appear to inform you about how many titles are left to process.
+
+<p align="center"><img width="40%" src="docs/progress-window.png"></p>
+
+If all titles are saved to their destination, a confirmation dialog will pop up.
+
+<p align="center"><img width="40%" src="docs/confirm-finish-dialog.png"></p>
+
+That's it ;)
