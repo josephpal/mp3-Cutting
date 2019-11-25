@@ -86,19 +86,30 @@ SHELL_ARGS=$1
 # https://help.gnome.org/users/zenity/stable/file-selection.html.en
 # http://linux.byexamples.com/archives/259/a-complete-zenity-dialog-examples-1/
 # http://manpages.ubuntu.com/manpages/natty/man1/zenity.1.html
+# https://unix.stackexchange.com/questions/254072/how-do-i-ask-password-by-gui-prompt-while-using-sudo-in-script
+# https://www.shell-tips.com/2010/06/14/performing-math-calculation-in-bash/
+# https://unix.stackexchange.com/questions/80532/use-the-terminals-autocomplete-path-feature-for-input-to-a-shell-script
 #
 # ========================================================================================================================= #
 
-# Variables
+# variables
+VERSION="0.6";
+numberOfElements="0";
 
-VERSION="0.6"
-numberOfElements="0"
+# system variables
+GUIMODE=1;
+SOX=0;
+ZENITY=0;
+TXT_FILE="";
+MP3_FILE="";
+directoryPath="";
+
+# Index, counters
 i=0;
 ii=0;
 
 clear
 
-# ========================================================================================================================= #
 # ========================================================================================================================= #
 
 # Helper Functions
@@ -114,7 +125,7 @@ function timeDiff() {
 	echo $diff_time
 }
 
-function check_Args() {
+function checkArgs() {
 
 	if [ -z "$SHELL_ARGS" ];
 	then
@@ -131,9 +142,17 @@ function check_Args() {
 
 	if [ $SHELL_ARGS = "--help" ];
 	then
-		# echo "No other command line options are aviable."
+		# echo "No other command line options are available."
 		help
 		exit 0
+	fi
+
+	if [ $SHELL_ARGS = "--no-gui" ];
+	then
+		echo -e '\033[1;33mDeactivating graphical user interface ...\033[0m'
+		read -p 'Press [ENTER] to continue: ' BREAK
+
+		GUIMODE=0;
 	fi
 
 	if [ $SHELL_ARGS = "--debug" ];
@@ -163,10 +182,10 @@ function help() {
 	echo '		txt file into seperated songs'
 	echo
 	echo 'OPTIONS'
-	echo '		--help		Prints the command line options'
-	echo '		--version	Output version information and exit'
-	echo '		--start		Start the main routine of the script'
-	echo '		--debug		Enables Debug mode. Sox trim is disabled !'
+	echo '		--help		Prints the command line options.'
+	echo '		--version	Output version information and exit.'
+	echo '		--no-gui	Start the script in terminal mode (without zenity gui).'
+	echo '		--debug		Enables Debug mode. Sox trim is disabled!'
 	echo 'BUGS'
 	echo '		If you find a bug, please report it to jose199441@gmail.com'
 	echo
@@ -174,167 +193,376 @@ function help() {
 	echo '		Joseph Pal'
 	echo
 
-    	OUTPUT=`echo -e "\033[1;32mMP3Cutting.sh(1) 	           27 Okt 2015                  MP3Cutting.sh(1)\033[0m"`
-    	read -p "$OUTPUT" BREAK
+	OUTPUT=`echo -e "\033[1;32mMP3Cutting.sh(1) 	           27 Okt 2015                  MP3Cutting.sh(1)\033[0m"`
+	read -p "$OUTPUT" BREAK
+
 	clear
 	exit 0
 }
 
-# ========================================================================================================================= #
-check_Args
-# ========================================================================================================================= #
+function checkEnvironment() {
+	echo "Checking environment ..."
+	clear
 
-# File Selection -> txt
+	ZENITY_PATH=`which zenity`
+	if [[ $? -eq 0 ]]; then
+		ZENITY=1;
+		echo -e 'Package zenity found.\t\t\t\t\t\t\t [ \033[1;32m OK \033[0m ]'
+	else
+		echo -e '\033[1;31mGraphical user mode is not available!\033[0m'
+		GUIMODE=0;
+		gnome-terminal
+		echo -e '\033[1;31mThe package zenity is not installed and neccessary.\033[0m'
+		read -p 'Do you want to install it? [y/n]: ' DECISSION
 
-TXT_FILE=`zenity --file-selection --file-filter=*.txt --title="Select the Text File"`
+		if [ "$DECISSION" == "y" || "$DECISSION" = "yes" ]; then
+			echo -e 'Installing zenity ...'
+			sudo apt-get install zenity
 
-case $? in
-         0)
-                echo -e 'Loading TXT File ... \t\t\t\t\t\t\t [ \033[1;32mOK \033[0m ]\n';;
-         1)
-                echo -e 'Loading TXT File ... \t\t\t\t\t\t\t[ \033[1;31mFAIL\033[0m ]'
-		echo -e '\033[1;31mCan not find the selected file !\033[0m'
-		exit -1;;
-        -1)
-                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
-		exit -1;;
-esac
+			if [[ $? -eq 0 ]]; then
+				ZENITY=1;
+				clear
+			else
+				echo -e '\033[1;31mInstallation failed!\033[0m'
+				exit -1;
+			fi
+		else
+			echo -e '\033[1;31mInstallation aborted!\033[0m'
+			exit -1;
+		fi
+	fi
 
-# File Selection -> MP3
+	SOX_PATH=`which sox`
+	if [[ $? -eq 0 ]]; then
+		SOX=1;
+		echo -e 'Package sox found.\t\t\t\t\t\t\t [ \033[1;32m OK \033[0m ]'
+	else
+		if [[ $GUIMODE -eq 0 ]]; then
+			echo -e '\033[1;31mThe package sox is not installed and neccessary.\033[0m'
+			read -p 'Do you want to install it? [y/n]: ' DECISSION
 
-MP3_FILE=`zenity --file-selection --file-filter=*.mp3 --title="Select the MP3 File"`
+			if [ "$DECISSION" == "y" || "$DECISSION" == "yes" ]; then
+				echo -e 'Installing sox ...'
+				sudo apt-get install sox && sudo apt-get install libsox-fmt-mp3
 
-case $? in
-         0)
-                echo -e 'Loading MP3 File ... \t\t\t\t\t\t\t [ \033[1;32mOK \033[0m ]\n';;
-         1)
-                echo -e 'Loading MP3 File ... \t\t\t\t\t\t\t[ \033[1;31mFAIL\033[0m ]'
-		echo -e '\033[1;31mCan not find the selected file !\033[0m'
-		exit -1;;
-        -1)
-                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
-		exit -1;;
-esac
+				if [[ $? -eq 0 ]]; then
+					SOX=1;
+					clear
+				else
+					echo -e '\033[1;31mInstallation failed!\033[0m'
+					exit -1;
+				fi
+			else
+				echo -e '\033[1;31mInstallation aborted!\033[0m'
+				exit -1;
+			fi
+		else
+			USERRESPONSE=`zenity --question --title="Package sox not found!" --text="Do you want to install it now?" --width=210 --height=120 > /dev/null 2>&1`
+			case $? in
+			         0)
+			                echo -e 'Installing sox ...'
+											pkexec apt-get install sox
+											if [[ $? -eq 0 ]]; then
+												SOX=1;
+												clear
+											else
+												echo -e '\033[1;31mPermission required!\033[0m'
+												exit -1;
+											fi;;
+			         1)
+			                echo -e '\033[1;31mInstallation aborted!\033[0m'
+											exit -1;;
+			        -1)
+			                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
+											exit -1;;
+			esac
+		fi
+	fi
+}
 
-# Directory to save the files to
-
-directoryPath=`zenity --file-selection --directory --save --title="Select a directory for saving"`
-
-case $? in
-         0)
-                echo "Saving Directory: $directoryPath selected.";;
-         1)
-                echo -e '\033[1;31mNo Directory selected.\033[0m'
-		exit -1;;
-        -1)
-                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
-		exit -1;;
-esac
-
-# ========================================================================================================================= #
-# ========================================================================================================================= #
-
-# Loading all time steps in timeArray
-
-echo -e 'Loading Time Steps into the Array ...'
-
-while read line
-do
-
-  # tmp=`echo $line | sed s/[^0-9:0-9]//g`
-  # echo $tmp
-
-  # Fixing segmentation fault with pattern -> [0-9][0-9]:[0-9][0-9]:[0-9][0-9] !
-  timeArray[$i]=`echo $line | sed -n 's/.*\([0-9][0-9]:[0-9][0-9]:[0-9][0-9]\).*/\1/p'`
-  echo "Time[$i]: ${timeArray[$i]}"
-  i=$[$i+1]
-
-done < "$TXT_FILE"
-
-echo -e 'Done.\n'
-
-# ========================================================================================================================= #
-# ========================================================================================================================= #
-
-# Loading all Titles in title Array
-
-echo -e 'Loading Music Titles ...'
-
-while read line
-do
-
-  # Fixing segmentation fault with deleting numbers in the titles ! -> | sed -e 's/[0-9]//'
-  titleArray[$ii]=`echo $line | sed -e 's/^[0-9]*:*[0-9]*:[0-9]*\s*//'`
-  echo "Title[$ii]: ${titleArray[$ii]}"
-  ii=$[$ii+1]
-
-done < "$TXT_FILE"
-
-echo -e 'Done.\n'
-
-# ========================================================================================================================= #
-# ========================================================================================================================= #
-
-# Cutting / Trimming the mp3 file
-
-numberOfElements=$ii
-
-if [ $numberOfElements != $i ]
-then
-	echo -e '\033[1;31mError: Number of TimeElements doesnt fit with the Titlenumbers\033[0m'
-	exit -1
-else
+function displayInputParameter() {
 	echo "Number of Elements to create: $numberOfElements"
 	echo "Input TXT-File: $TXT_FILE"
 	echo "Input MP3-File: $MP3_FILE"
 	echo "Output Directory: $directoryPath/"
+}
 
-	endOfFile=`expr $numberOfElements - 1`
-	echo -e "EOF: After $endOfFile Tracks\n"
+function verifyInputParameters() {
+	if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+		# nothing to do
+		echo "." > /dev/null 2>&1
+	else
+		# replace whitespace in path
+		# TXT_FILE="$(echo $TXT_FILE | sed 's/ /\\ /g')"
+		# MP3_FILE="$(echo $MP3_FILE | sed 's/ /\\ /g')"
+		# directoryPath="$(echo $directoryPath | sed 's/ /\\ /g')"
+		echo "." > /dev/null 2>&1
+	fi
+}
 
-	for (( element=0; element <= $numberOfElements-1; ++element ))
+function loadTimeSteps2Array() {
+	echo -e '\nLoading time steps into the array ...'
+
+	while read line
 	do
-		# Add the title Number to the filename
-		if [ $element -le "8" ];
-		then
-			titleNumber="0"`expr $element + 1`
-		else
-			titleNumber=`expr $element + 1`
-		fi
+	  # Fixing segmentation fault with pattern -> [0-9][0-9]:[0-9][0-9]:[0-9][0-9] !
+	  timeArray[$i]=`echo $line | sed -n 's/.*\([0-9][0-9]:[0-9][0-9]:[0-9][0-9]\).*/\1/p'`
+	  echo -e "-> timeArray[$i]: \t${timeArray[$i]}"
+	  i=$[$i+1]
+	done < "$TXT_FILE"
 
-		# Generates the filename
-		fileName=$titleNumber" - "${titleArray[$element]}".mp3"
+	echo -e 'Done.\n'
+}
 
-		if [ $element -lt $endOfFile ];
-		then
-			# Calculate th lenght of one title
-			titleDuration=$(($(t2s ${timeArray[$element+1]}) - $(t2s ${timeArray[$element]}) ))
+function loadMusicTitles2Array() {
+	echo -e 'Loading music titles ...'
 
-			echo -e "[$element]:\t${timeArray[$element]} to ${timeArray[$element+1]} Length: $titleDuration Seconds -> $fileName"
+	while read line
+	do
+	  # Fixing segmentation fault with deleting numbers in the titles ! -> | sed -e 's/[0-9]//'
+	  titleArray[$ii]=`echo $line | sed -e 's/^[0-9]*:*[0-9]*:[0-9]*\s*//'`
+	  echo -e "-> titleArray[$ii]: \t${titleArray[$ii]}"
+	  ii=$[$ii+1]
+	done < "$TXT_FILE"
 
-			if [ $SHELL_ARGS = "--debug" ];
-			then
-				# Nothing to do -> Debug mode disable sox trimming !
-				echo -e "\n"
-			else
-				# sox Inputfile Outputfile trim Start Duration(t) -> NOT Endtime !!!
-				sox "$MP3_FILE" "$directoryPath/$fileName" trim ${timeArray[$element]} $titleDuration > /dev/null 2>&1
-			fi
-		else
-			if [ $SHELL_ARGS = "--debug" ];
-			then
-				# Nothing to do -> Debug mode disable sox trimming !
-				echo -e "\n"
-			else
-				echo -e "[$element]:\t${timeArray[$element]} to EOF -> $fileName"
-				sox "$MP3_FILE" "$directoryPath/$fileName" trim "${timeArray[$element]}" > /dev/null 2>&1
-			fi
-		fi
+	echo -e 'Done.\n'
+}
+
+function progressBar() {
+	setterm -cursor off
+
+	local duration=${1}
+	already_done() { for ((done=0; done<$elapsed; done++)); do printf "▇▇▇▇▇▇▇▇"; done }
+	remaining() { for ((remain=$elapsed; remain<$duration; remain++)); do printf "        "; done }
+	percentage() { progress=`echo "scale=2;($elapsed/$duration)*100" | bc`; printf "| %s%%" $progress; }
+	clean_line() { printf "\r"; }
+
+	for (( elapsed=1; elapsed<=$duration; elapsed++ )); do
+			already_done; remaining; percentage
+			sleep 1
+			clean_line
 	done
+	clean_line
+
+	setterm -cursor on
+}
+
+function initialize() {
+	# check for given shell script arguments stored in $1
+	checkArgs;
+
+	# check operating system setup for dependencies
+	checkEnvironment;
+}
+
+
+function askForTitleTXTFile() {
+	if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+		TXT_FILE=`zenity --file-selection --file-filter=*.txt --title="Select the Text File" 2>/dev/null`
+
+		case $? in
+		         0)
+	                echo -e 'Loading TXT File ... \t\t\t\t\t\t\t [ \033[1;32m OK \033[0m ]'
+									echo "=> $TXT_FILE";;
+		         1)
+	                echo -e 'Loading TXT File ... \t\t\t\t\t\t\t [ \033[1;31mFAIL\033[0m ]'
+									echo -e '\033[1;31mCan not find the selected file !\033[0m'
+									exit -1;;
+		        -1)
+	                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
+									exit -1;;
+		esac
+	else
+		read -p "Please specify the path to the title file (*.txt): " -i "$HOME/" -e TXT_FILE
+		CHECKINPUT=`echo $TXT_FILE | grep .txt`
+
+		if [[ $? -ne 0 ]]; then
+			echo -e "\033[1;31m$TXT_FILE does not match type *.txt !\033[0m"
+			exit -1;
+		else
+			if [[ ! -f "$TXT_FILE" ]]; then
+				echo -e "\033[1;31mCan not find the selected file !\033[0m"
+				exit -1;
+			fi
+		fi
+	fi
+}
+
+function askForMP3AudioFile() {
+	if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+		MP3_FILE=`zenity --file-selection --file-filter=*.mp3 --title="Select the MP3 File" 2>/dev/null`
+
+		case $? in
+		         0)
+		                echo -e 'Loading MP3 File ... \t\t\t\t\t\t\t [ \033[1;32m OK \033[0m ]'
+										echo "=> $MP3_FILE";;
+		         1)
+		                echo -e 'Loading MP3 File ... \t\t\t\t\t\t\t [ \033[1;31mFAIL\033[0m ]'
+										echo -e '\033[1;31mCan not find the selected file !\033[0m'
+										exit -1;;
+		        -1)
+		                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
+										exit -1;;
+		esac
+	else
+		TXTDIRECTORY="${TXT_FILE%/*}"
+		STARTDIR="$(echo $TXTDIRECTORY | sed 's/ /\\ /g')"
+
+		read -p "Please specify the path to the mp3 audio file: " -i "$STARTDIR/" -e MP3_FILE
+		CHECKINPUT=`echo $MP3_FILE | grep .mp3`
+
+		if [[ $? -ne 0 ]]; then
+			echo -e "\033[1;31m$MP3_FILE does not match type *.mp3 !\033[0m"
+			exit -1;
+		else
+			if [[ ! -f "$MP3_FILE" ]]; then
+				echo -e "\033[1;31mCan not find the selected file !\033[0m"
+				exit -1;
+			fi
+		fi
+	fi
+}
+
+function askForOutputDirectory() {
+	if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+		directoryPath=`zenity --file-selection --directory --save --title="Select a directory for saving" 2>/dev/null`
+
+		case $? in
+		         0)
+						 				echo -e 'Opening directory ... \t\t\t\t\t\t\t [ \033[1;32m OK \033[0m ]'
+							      echo "=> Saving Directory: $directoryPath selected.";;
+		         1)
+		                echo -e '\033[1;31mNo Directory selected.\033[0m'
+										exit -1;;
+		        -1)
+		                echo -e '\033[1;31mAn unexpected error has occurred.\033[0m'
+										exit -1;;
+		esac
+	else
+		read -p "Please specify the path to store the project: " -i "$STARTDIR/" -e directoryPath
+
+		if [[ ! -d "$directoryPath" ]]; then
+			echo -e "\033[1;31mCan not find directory $directoryPath !\033[0m"
+			exit -1;
+		fi
+	fi
+}
+
+
+function initCuttingAudioFile() {
+	# prepare input parameters
+	verifyInputParameters;
+
+	# loading all time steps in time array
+	loadTimeSteps2Array;
+
+	# loading all titles in title array
+	loadMusicTitles2Array;
+}
+
+function cuttingMP3AudioFile() {
+	numberOfElements=$ii
+
+	if [ $numberOfElements != $i ]
+	then
+		echo -e '\033[1;31mError: Number of TimeElements does not fit with the title numbers!\033[0m'
+		exit -1;
+	else
+		displayInputParameter;
+
+		endOfFile=`expr $numberOfElements - 1`
+		echo -e "EOF: After $endOfFile Tracks\n"
+
+		for (( element=0; element <= $numberOfElements-1; ++element ))
+		do
+			# Add the title Number to the filename
+			if [ $element -le "8" ];
+			then
+				titleNumber="0"`expr $element + 1`
+			else
+				titleNumber=`expr $element + 1`
+			fi
+
+			# Generates the filename
+			fileName=$titleNumber" - "${titleArray[$element]}".mp3"
+
+			if [ $element -lt $endOfFile ];
+			then
+				# Calculate th lenght of one title
+				titleDuration=$(($(t2s ${timeArray[$element+1]}) - $(t2s ${timeArray[$element]}) ))
+
+				echo -e "[$element]:\t${timeArray[$element]} to ${timeArray[$element+1]} Length: $titleDuration Seconds -> $fileName"
+
+				if [ $SHELL_ARGS = "--debug" ];
+				then
+					# Nothing to do -> Debug mode disable sox trimming !
+					echo -e "\n"
+				else
+					# sox Inputfile Outputfile trim Start Duration(t) -> NOT Endtime !!!
+					sox "$MP3_FILE" "$directoryPath/$fileName" trim ${timeArray[$element]} $titleDuration > /dev/null 2>&1
+				fi
+			else
+				if [ $SHELL_ARGS = "--debug" ];
+				then
+					# Nothing to do -> Debug mode disable sox trimming !
+					echo -e "\n"
+				else
+					echo -e "[$element]:\t${timeArray[$element]} to EOF -> $fileName"
+					sox "$MP3_FILE" "$directoryPath/$fileName" trim "${timeArray[$element]}" > /dev/null 2>&1
+				fi
+			fi
+
+			if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+				echo "scale=2;($titleNumber/$numberOfElements)*100" | bc
+				echo "# [$titleNumber/$numberOfElements]: $fileName"
+			else
+				# TODO: text mode progressBar
+				# progressBar 10
+			fi
+		done
+	fi
+
+	echo
+	if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+		echo "# Finished $numberOfElements jobs !"
+	else
+		echo "Finished $numberOfElements jobs !"
+	fi
+	echo "Done."
+}
+
+# ========================================================================================================================= #
+
+# initialize system
+initialize;
+
+# file selection -> txt
+askForTitleTXTFile;
+
+# file selection -> MP3
+askForMP3AudioFile;
+
+# directory to save the files to
+askForOutputDirectory;
+
+# initialize variables and arrays
+initCuttingAudioFile;
+
+# cutting / trimming the mp3 file
+if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
+	cuttingMP3AudioFile | zenity --progress \
+	--title="Preparing mp3 audio tracks" \
+	--text="Loading tracks ..." \
+	--percentage=0 \
+	--width=300 --height=140 2>/dev/null
+
+	if [[ $? -eq -1 ]]; then
+  	zenity --error --text="Update canceled." 2>/dev/null
+		exit -1;
+	fi
+else
+	cuttingMP3AudioFile;
 fi
 
-echo .
-echo "Finished $numberOfElements jobs !"
-echo "Done."
-
+# ========================================================================================================================= #
 # ========================================================================================================================= #
