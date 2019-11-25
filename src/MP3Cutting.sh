@@ -158,7 +158,9 @@ function checkArgs() {
 	if [ $SHELL_ARGS = "--debug" ];
 	then
 		read -p 'Debug mode enabled.' BREAK
-		set -x
+		# set -x;
+
+		GUIMODE=0;
 	fi
 }
 
@@ -337,11 +339,20 @@ function progressBar() {
 	percentage() { progress=`echo "scale=2;($elapsed/$duration)*100" | bc`; printf "| %s%%" $progress; }
 	clean_line() { printf "\r"; }
 
+	# drawing the progress bar
 	for (( elapsed=1; elapsed<=$duration; elapsed++ )); do
 			already_done; remaining; percentage
-			sleep 1
+			sleep 0.25
 			clean_line
 	done
+
+	clean_line
+
+	# cleaning up
+	for (( elapsed=1; elapsed<=$duration; elapsed++ )); do
+			printf "            "
+	done
+
 	clean_line
 
 	setterm -cursor on
@@ -493,20 +504,20 @@ function cuttingMP3AudioFile() {
 
 				echo -e "[$element]:\t${timeArray[$element]} to ${timeArray[$element+1]} Length: $titleDuration Seconds -> $fileName"
 
-				if [ $SHELL_ARGS = "--debug" ];
+				if [ $SHELL_ARGS != "--debug" ];
 				then
 					# Nothing to do -> Debug mode disable sox trimming !
-					echo -e "\n"
-				else
+					# echo -e "\n"
+				# else
 					# sox Inputfile Outputfile trim Start Duration(t) -> NOT Endtime !!!
 					sox "$MP3_FILE" "$directoryPath/$fileName" trim ${timeArray[$element]} $titleDuration > /dev/null 2>&1
 				fi
 			else
-				if [ $SHELL_ARGS = "--debug" ];
+				if [ $SHELL_ARGS != "--debug" ];
 				then
 					# Nothing to do -> Debug mode disable sox trimming !
-					echo -e "\n"
-				else
+					# echo -e "\n"
+				# else
 					echo -e "[$element]:\t${timeArray[$element]} to EOF -> $fileName"
 					sox "$MP3_FILE" "$directoryPath/$fileName" trim "${timeArray[$element]}" > /dev/null 2>&1
 				fi
@@ -517,7 +528,7 @@ function cuttingMP3AudioFile() {
 				echo "# [$titleNumber/$numberOfElements]: $fileName"
 			else
 				# TODO: text mode progressBar
-				# progressBar 10
+				progressBar 10
 			fi
 		done
 	fi
