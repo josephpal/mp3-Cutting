@@ -343,8 +343,16 @@ function progressBar() {
 			clean_line
 	done
 	clean_line
-	
+
 	setterm -cursor on
+}
+
+function initialize() {
+	# check for given shell script arguments stored in $1
+	checkArgs;
+
+	# check operating system setup for dependencies
+	checkEnvironment;
 }
 
 
@@ -441,7 +449,7 @@ function askForOutputDirectory() {
 }
 
 
-function initialize() {
+function initCuttingAudioFile() {
 	# prepare input parameters
 	verifyInputParameters;
 
@@ -509,7 +517,7 @@ function cuttingMP3AudioFile() {
 				echo "# [$titleNumber/$numberOfElements]: $fileName"
 			else
 				# TODO: text mode progressBar
-				progressBar 10
+				# progressBar 10
 			fi
 		done
 	fi
@@ -524,15 +532,9 @@ function cuttingMP3AudioFile() {
 }
 
 # ========================================================================================================================= #
-# ========================================================================================================================= #
-progressBar 10
-# check for given shell script arguments stored in $1
-checkArgs;
 
-# check operating system setup for dependencies
-checkEnvironment;
-
-# ========================================================================================================================= #
+# initialize system
+initialize;
 
 # file selection -> txt
 askForTitleTXTFile;
@@ -543,10 +545,8 @@ askForMP3AudioFile;
 # directory to save the files to
 askForOutputDirectory;
 
-# ========================================================================================================================= #
-
 # initialize variables and arrays
-initialize;
+initCuttingAudioFile;
 
 # cutting / trimming the mp3 file
 if [[ $GUIMODE -eq 1 && $ZENITY -eq 1 ]]; then
